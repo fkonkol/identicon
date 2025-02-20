@@ -15,7 +15,7 @@ type Identicon struct {
 func New(source []byte) Identicon {
 	return Identicon{
 		source: source,
-		size:   320,
+		size:   448,
 	}
 }
 
@@ -67,6 +67,7 @@ func (i *Identicon) Pixels() [5][5]bool {
 }
 
 func (i *Identicon) Image() *image.RGBA {
+	padding := 64
 	background := color.RGBA{R: 240, G: 240, B: 240, A: 255}
 	foreground := i.Foreground()
 
@@ -77,7 +78,7 @@ func (i *Identicon) Image() *image.RGBA {
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
 			if pixels[y][x] {
-				i.Rect(image, x*64, y*64, 64, 64, foreground)
+				i.Rect(image, x*64+padding, y*64+padding, 64, 64, foreground)
 			}
 		}
 	}
