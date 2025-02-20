@@ -2,40 +2,70 @@ package main
 
 import (
 	"crypto/md5"
+	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
+	"runtime/debug"
+	"strings"
 
 	"github.com/fkonkol/identicon/identicon"
 )
 
-func saveIdenticonToFile(icon *identicon.Identicon, name string) error {
-	file, err := os.Create(name + ".png")
+func parseIdentifier(r *http.Request) (string, error) {
+	identifier := r.PathValue("identifier")
+
+	if !strings.HasSuffix(identifier, ".png") {
+		return "", fmt.Errorf("unsupported media type")
+	}
+
+	identifier = strings.TrimSuffix(identifier, ".png")
+
+	if strings.TrimSpace(identifier) == "" {
+		return "", fmt.Errorf("identifier is required")
+	}
+
+	return identifier, nil
+}
+
+func getIdenticon(w http.ResponseWriter, r *http.Request) {
+	identifier, err := parseIdentifier(r)
 	if err != nil {
-		return err
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	checksum := md5.Sum([]byte(identifier))
+	icon, err := identicon.New(
+		identicon.WithSource(checksum[:]),
+	)
+	if err != nil {
+		slog.Error(err.Error())
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
 
 	bytes, err := icon.Bytes()
 	if err != nil {
-		return err
+		slog.Error(err.Error())
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
 
-	_, err = file.Write(bytes)
-	return err
+	w.Header().Set("Content-Type", "image/png")
+	w.Write(bytes)
 }
 
 func main() {
-	name := "fkonkol"
-	sum := md5.Sum([]byte(name))
-
-	icon, err := identicon.New(
-		identicon.WithSource(sum[:]),
-		identicon.WithPadding(100),
-		identicon.WithSize(1000),
-	)
-	if err != nil {
-		panic(err)
+	if err := run(); err != nil {
+		trace := string(debug.Stack())
+		slog.Error(err.Error(), "trace", trace)
+		os.Exit(1)
 	}
+}
 
-	if err := saveIdenticonToFile(icon, name); err != nil {
-		panic(err)
-	}
+func run() error {
+	slog.Info("starting server on :4000")
+	http.HandleFunc("/identicons/{identifier}", getIdenticon)
+	return http.ListenAndServe(":4000", nil)
 }
