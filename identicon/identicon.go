@@ -31,8 +31,8 @@ func WithSource(source []byte) Option {
 
 func WithSize(size int) Option {
 	return func(i *Identicon) error {
-		if size < 0 {
-			return errors.New("negative size")
+		if size <= 0 || size >= 1<<32 {
+			return errors.New("invalid image size")
 		}
 		i.size = size
 		return nil
