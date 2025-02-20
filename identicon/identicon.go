@@ -1,6 +1,7 @@
 package identicon
 
 import (
+	"errors"
 	"image"
 	"image/color"
 	"iter"
@@ -8,15 +9,57 @@ import (
 )
 
 type Identicon struct {
-	source []byte
-	size   int
+	source  []byte
+	size    int
+	padding int
 }
 
-func New(source []byte) Identicon {
-	return Identicon{
-		source: source,
-		size:   448,
+type Option func(*Identicon) error
+
+func WithSource(source []byte) Option {
+	return func(i *Identicon) error {
+		if nil == source {
+			return errors.New("nil source byte slice")
+		}
+		i.source = source
+		return nil
 	}
+}
+
+func WithSize(size int) Option {
+	return func(i *Identicon) error {
+		if size < 0 {
+			return errors.New("negative size")
+		}
+		i.size = size
+		return nil
+	}
+}
+
+func WithPadding(padding int) Option {
+	return func(i *Identicon) error {
+		if padding < 0 {
+			return errors.New("negative padding")
+		}
+		i.padding = padding
+		return nil
+	}
+}
+
+func New(opts ...Option) (*Identicon, error) {
+	i := &Identicon{
+		size:    500,
+		padding: 64,
+	}
+
+	for _, opt := range opts {
+		err := opt(i)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return i, nil
 }
 
 // TODO: Always generate pretty colors 🦄 Should probably be HSL/HSB based.
@@ -55,6 +98,7 @@ func (i *Identicon) Pixels() [5][5]bool {
 	defer stop()
 
 	for row := 0; row < 5; row++ {
+
 		for col := 0; col < 5/2+1; col++ {
 			nibble, _ := next()
 			paint := nibble&1 == 0
@@ -67,7 +111,8 @@ func (i *Identicon) Pixels() [5][5]bool {
 }
 
 func (i *Identicon) Image() *image.RGBA {
-	padding := 64
+	chunk := (i.size - i.padding*2) / 5
+
 	background := color.RGBA{R: 240, G: 240, B: 240, A: 255}
 	foreground := i.Foreground()
 
@@ -78,7 +123,7 @@ func (i *Identicon) Image() *image.RGBA {
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
 			if pixels[y][x] {
-				i.Rect(image, x*64+padding, y*64+padding, 64, 64, foreground)
+				i.Rect(image, x*chunk+i.padding, y*chunk+i.padding, chunk, chunk, foreground)
 			}
 		}
 	}

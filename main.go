@@ -9,10 +9,17 @@ import (
 )
 
 func main() {
-	name := "fkonkol"
+	name := "fkonkole"
 	sum := md5.Sum([]byte(name))
 
-	icon := identicon.New(sum[:])
+	icon, err := identicon.New(
+		identicon.WithSource(sum[:]),
+		identicon.WithPadding(100),
+		identicon.WithSize(1000),
+	)
+	if err != nil {
+		panic(err)
+	}
 
 	file, err := os.Create(name + ".png")
 	if err != nil {
