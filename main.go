@@ -2,14 +2,28 @@ package main
 
 import (
 	"crypto/md5"
-	"image/png"
 	"os"
 
 	"github.com/fkonkol/identicon/identicon"
 )
 
+func saveIdenticonToFile(icon *identicon.Identicon, name string) error {
+	file, err := os.Create(name + ".png")
+	if err != nil {
+		return err
+	}
+
+	bytes, err := icon.Bytes()
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(bytes)
+	return err
+}
+
 func main() {
-	name := "fkonkole"
+	name := "fkonkol"
 	sum := md5.Sum([]byte(name))
 
 	icon, err := identicon.New(
@@ -21,13 +35,7 @@ func main() {
 		panic(err)
 	}
 
-	file, err := os.Create(name + ".png")
-	if err != nil {
-		panic(err)
-	}
-
-	err = png.Encode(file, icon.Image())
-	if err != nil {
+	if err := saveIdenticonToFile(icon, name); err != nil {
 		panic(err)
 	}
 }

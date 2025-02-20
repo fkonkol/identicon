@@ -1,9 +1,12 @@
 package identicon
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
+	"image/png"
 	"iter"
 	"math/rand/v2"
 )
@@ -129,4 +132,13 @@ func (i *Identicon) Image() *image.RGBA {
 	}
 
 	return image
+}
+
+func (i *Identicon) Bytes() ([]byte, error) {
+	var buf bytes.Buffer
+	err := png.Encode(&buf, i.Image())
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode image: %w", err)
+	}
+	return buf.Bytes(), nil
 }
