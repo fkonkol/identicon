@@ -2,13 +2,13 @@ package identicon
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"iter"
-	"math/rand/v2"
 )
 
 type Identicon struct {
@@ -65,12 +65,16 @@ func New(opts ...Option) (*Identicon, error) {
 	return i, nil
 }
 
-// TODO: Always generate pretty colors 🦄 Should probably be HSL/HSB based.
 func (i *Identicon) Foreground() color.RGBA {
-	r := uint8(128 + rand.IntN(129))
-	g := uint8(128 + rand.IntN(129))
-	b := uint8(128 + rand.IntN(129))
-	return color.RGBA{R: r, G: g, B: b, A: 255}
+	n := binary.BigEndian.Uint32(i.source[:4])
+
+	hsl := HSL{
+		H: float64(n % 360),
+		S: 96,
+		L: 52,
+	}
+
+	return hsl.ToRGBA()
 }
 
 func (i *Identicon) Rect(img *image.RGBA, x0, y0, x1, y1 int, color color.RGBA) {
